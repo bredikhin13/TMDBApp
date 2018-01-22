@@ -6,4 +6,5 @@
     <color name="colorFill">#1c1d1f</color>
     <color name="colorFillDark">#0A328B</color>
     <color name="colorWhite">#ffffff</color>
+    <color name="colorAlertText">#b4b4b4</color>
 </resources>

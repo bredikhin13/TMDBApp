@@ -12,9 +12,11 @@ import android.os.Bundle;
 import android.view.View;
 import android.widget.AbsListView;
 import android.widget.AdapterView;
+import android.widget.FrameLayout;
 import android.widget.ListView;
 import android.widget.ProgressBar;
 import android.widget.SearchView;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.home.pavel.myapplication.model.SaveInFile;
@@ -45,6 +47,7 @@ public class MainActivity extends AppCompatActivity {
     Retrofit retrofit;
     TmdbApiInterface apiInterface;
     //    Resp resp;
+    TextView alertTextView;
     ArrayList<FilmInfo> filmInfos;
     int nextPage;
     int lastPage = 1000;
@@ -53,6 +56,7 @@ public class MainActivity extends AppCompatActivity {
     String query = "";
     SearchView searchView;
     OneMoreFilmClass filmClass;
+    FrameLayout frameLayout;
 //    private String apiKey = "6ccd72a2a8fc239b13f209408fc31c33";
 
     @Override
@@ -64,8 +68,11 @@ public class MainActivity extends AppCompatActivity {
         nextPage = filmClass.getNextPage();
         swipeRefreshLayout = findViewById(R.id.swipeRefreshLayout);
         searchView = findViewById(R.id.searchView);
+        alertTextView = findViewById(R.id.alertTextView);
         progressBar = findViewById(R.id.progressBar);
         progressBarCyrcle = findViewById(R.id.progressBar2);
+        frameLayout = findViewById(R.id.frameLayout);
+        //frameLayout.setVisibility(View.INVISIBLE);
         progressBar.setVisibility(View.INVISIBLE);
         progressBarCyrcle.setVisibility(View.INVISIBLE);
         client = filmClass.getClient();
@@ -158,22 +165,32 @@ public class MainActivity extends AppCompatActivity {
             call = apiInterface.getFiltredFilms(Constants.API_KEY, "ru", page, query);
         }
         System.out.println("Start load");
+        progress = 0;
+        progressBar.setProgress(progress);
         call.enqueue(new Callback<Resp>() {
             @Override
             public void onResponse(Call<Resp> call, retrofit2.Response<Resp> response) {
                 Resp resp = response.body();
-                filmInfos = (ArrayList<FilmInfo>) resp.getResults();
-                //filmClass.addToAllFilms((ArrayList<FilmInfo>) resp.getResults());
+                if(resp.getTotalResults()!=0) {
+                    filmInfos = (ArrayList<FilmInfo>) resp.getResults();
+                    //filmClass.addToAllFilms((ArrayList<FilmInfo>) resp.getResults());
 //                lastPage = resp.getTotalPages();
 //                Kek();
-                new GetTask().execute();
-                filmClass.setNextPage(++nextPage);
-                System.out.println("end load");
+                    new GetTask().execute();
+                    filmClass.setNextPage(++nextPage);
+                    System.out.println("end load");
+                } else {
+                    alertTextView.setCompoundDrawablesWithIntrinsicBounds(0,R.drawable.ic_big_search,0,0);
+                    alertTextView.setText("По запросу \""+query+"\" ничего не найдено");
+                    alertTextView.setVisibility(View.VISIBLE);
+                    adapter.clearListData();
+                }
 //                textView.setText(resp.getTotalResults().toString());
             }
 
             @Override
             public void onFailure(Call<Resp> call, Throwable t) {
+                System.out.println("azazazazazaza");
                 call.cancel();
             }
         });
@@ -186,8 +203,6 @@ public class MainActivity extends AppCompatActivity {
         protected Void doInBackground(String... params) {
             //Integer count = filmClass.getAllFilms().size();
             Integer count = filmInfos.size();
-            progress = 0;
-            progressBar.setProgress(progress);
             try {
                 for (FilmInfo f : filmInfos) {
                     byte[] poster = get("http://image.tmdb.org/t/p/w185/" + f.getPosterPath());
@@ -195,7 +210,7 @@ public class MainActivity extends AppCompatActivity {
                         Bitmap bitmap = BitmapFactory.decodeByteArray(poster, 0, poster.length);
                         f.setPoster(bitmap);
                         publishProgress(progress += 100 / count);
-                        System.out.println("" + progress);
+//                        System.out.println("" + progress);
                     }
                 }
             } catch (Exception e) {
@@ -216,6 +231,7 @@ public class MainActivity extends AppCompatActivity {
         protected void onPreExecute() {
             if (!OneMoreFilmClass.isEmpty()) {
                 progressBar.setProgress(0);
+                frameLayout.setVisibility(View.VISIBLE);
                 progressBar.setVisibility(View.VISIBLE);
             } else {
                 progressBarCyrcle.setVisibility(View.VISIBLE);
@@ -225,6 +241,7 @@ public class MainActivity extends AppCompatActivity {
 
         @Override
         protected void onPostExecute(Void params) {
+            frameLayout.setVisibility(View.INVISIBLE);
             progressBar.setVisibility(View.INVISIBLE);
             progressBarCyrcle.setVisibility(View.INVISIBLE);
             if (nextPage == 2) {
