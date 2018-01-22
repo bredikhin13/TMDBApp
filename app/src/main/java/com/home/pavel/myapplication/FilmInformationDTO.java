@@ -8,7 +8,7 @@ import java.util.List;
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
 
-public class FilmInfo {
+public class FilmInformationDTO {
 
     @SerializedName("vote_count")
     @Expose

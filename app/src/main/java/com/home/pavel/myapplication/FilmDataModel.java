@@ -3,16 +3,15 @@ package com.home.pavel.myapplication;
 import java.util.ArrayList;
 
 import okhttp3.OkHttpClient;
-import retrofit2.Retrofit;
 
 /**
  * Created by Pavel on 22.01.2018.
  */
 
-public class OneMoreFilmClass {
-    private static OneMoreFilmClass _instance = null;
+public class FilmDataModel {
+    private static FilmDataModel _instance = null;
 
-    private OneMoreFilmClass(){
+    private FilmDataModel(){
         allFilms = new ArrayList<>();
         favFilms = new ArrayList<>();
         nextPage = 1;
@@ -20,7 +19,7 @@ public class OneMoreFilmClass {
         requestStatus = Constants.STATUS_EMPTY_LIST;
         client = new OkHttpClient();
     }
-    private ArrayList<FilmInfo> allFilms;
+    private ArrayList<FilmInformationDTO> allFilms;
     private ArrayList<Integer> favFilms;
     private Integer nextPage;
     private OkHttpClient client;
@@ -67,11 +66,11 @@ public class OneMoreFilmClass {
         return _instance.getCountFilms()==0;
     }
 
-    public ArrayList<FilmInfo> getAllFilms() {
+    public ArrayList<FilmInformationDTO> getAllFilms() {
         return allFilms;
     }
 
-    public void setAllFilms(ArrayList<FilmInfo> allFilms) {
+    public void setAllFilms(ArrayList<FilmInformationDTO> allFilms) {
         this.allFilms = allFilms;
     }
 
@@ -83,7 +82,7 @@ public class OneMoreFilmClass {
         this.favFilms = favFilms;
     }
 
-    public void addToAllFilms(ArrayList<FilmInfo> infos){
+    public void addToAllFilms(ArrayList<FilmInformationDTO> infos){
         allFilms.addAll(infos);
     }
 
@@ -97,9 +96,9 @@ public class OneMoreFilmClass {
         return allFilms.size();
     }
 
-    public static OneMoreFilmClass getInstance(){
+    public static FilmDataModel getInstance(){
         if (_instance == null){
-            _instance = new OneMoreFilmClass();
+            _instance = new FilmDataModel();
         }
         return _instance;
     }

@@ -1,4 +1,4 @@
-package com.home.pavel.myapplication.model;
+package com.home.pavel.myapplication;
 
 import android.content.Context;
 import android.widget.Toast;
@@ -16,9 +16,6 @@ import java.util.LinkedList;
 
 import static android.content.Context.MODE_APPEND;
 
-/**
- * Created by Pavel on 19.01.2018.
- */
 
 public class SaveInFile {
     public static void openFile(String fileName, Context context, ArrayList<Integer> list) {

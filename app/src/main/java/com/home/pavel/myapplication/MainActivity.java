@@ -20,8 +20,6 @@ import android.widget.SearchView;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.home.pavel.myapplication.model.SaveInFile;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.concurrent.Semaphore;
@@ -35,37 +33,35 @@ import retrofit2.Callback;
 import retrofit2.Retrofit;
 import retrofit2.converter.gson.GsonConverterFactory;
 
-import static com.home.pavel.myapplication.Constants.STATUS_OK;
-
 
 public class MainActivity extends AppCompatActivity {
 
     private OkHttpClient client;
     private SwipeRefreshLayout swipeRefreshLayout;
-    Semaphore semaphore;
-    ProgressBar progressBar;
-    ProgressBar progressBarCircle;
-    ListView listView;
-    Retrofit retrofit;
-    TmdbApiInterface apiInterface;
-    TextView alertTextView;
-    ArrayList<FilmInfo> filmInfos;
-    int nextPage;
-    int lastPage;
-    int progress = 0;
-    CustomAdapter adapter;
-    String query = "";
-    SearchView searchView;
-    OneMoreFilmClass filmClass;
-    FrameLayout frameLayout;
+    private boolean isSearchActive = false;
+    private Semaphore semaphore;
+    private ProgressBar progressBar;
+    private ProgressBar progressBarCircle;
+    private ListView listView;
+    private Retrofit retrofit;
+    private TmdbApiInterface apiInterface;
+    private TextView alertTextView;
+    private ArrayList<FilmInformationDTO> filmInformationDTOList;
+    private int nextPage;
+    private int lastPage;
+    private int progress = 0;
+    private FilmListAdapter adapter;
+    private String query = "";
+    private SearchView searchView;
+    private FilmDataModel dataFilms;
+    private FrameLayout frameLayout;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
         setContentView(R.layout.activity_main);
-        filmClass = OneMoreFilmClass.getInstance();
-        nextPage = filmClass.getNextPage();
+        dataFilms = FilmDataModel.getInstance();
+        nextPage = dataFilms.getNextPage();
         swipeRefreshLayout = findViewById(R.id.swipeRefreshLayout);
         searchView = findViewById(R.id.searchView);
         alertTextView = findViewById(R.id.alertTextView);
@@ -74,7 +70,7 @@ public class MainActivity extends AppCompatActivity {
         frameLayout = findViewById(R.id.frameLayout);
         progressBar.setVisibility(View.INVISIBLE);
         progressBarCircle.setVisibility(View.INVISIBLE);
-        client = filmClass.getClient();
+        client = dataFilms.getClient();
         retrofit = new Retrofit.Builder()
                 .baseUrl("https://api.themoviedb.org")
                 .addConverterFactory(GsonConverterFactory.create())
@@ -82,15 +78,40 @@ public class MainActivity extends AppCompatActivity {
                 .build();
         apiInterface = retrofit.create(TmdbApiInterface.class);
         listView = findViewById(R.id.listView);
-        SaveInFile.openFile(Constants.FILE_NAME, this, filmClass.getFavFilms());
+        SaveInFile.openFile(Constants.FILE_NAME, this, dataFilms.getFavFilms());
         semaphore = new Semaphore(1);
-        adapter = new CustomAdapter(this);
+        adapter = new FilmListAdapter(this);
         listView.setAdapter(adapter);
+        initListeners();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        query = searchView.getQuery().toString();
+        switch (dataFilms.getRequestStatus()) {
+            case 0:
+                break;
+            case 1:
+                showNetErrScreen();
+                break;
+            case 2:
+                showSearchErrScreen();
+                break;
+            case 3:
+                getData(nextPage);
+                break;
+            default:
+                break;
+        }
+    }
+
+    private void initListeners() {
         listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
                 Toast toast = Toast.makeText(getApplicationContext(),
-                        filmClass.getAllFilms().get(i).getTitle(), Toast.LENGTH_SHORT);
+                        dataFilms.getAllFilms().get(i).getTitle(), Toast.LENGTH_SHORT);
                 toast.show();
             }
         });
@@ -124,45 +145,25 @@ public class MainActivity extends AppCompatActivity {
             public boolean onQueryTextSubmit(String s) {
                 query = s;
                 nextPage = 1;
+                isSearchActive = true;
                 getData(nextPage);
                 return false;
             }
 
             @Override
             public boolean onQueryTextChange(String s) {
-                if (s.equals("") && searchView.isFocused()) {
-                    query = s;
-                    nextPage = 1;
-                    adapter.clearListData();
-                    getData(nextPage);
-                }
+//                if (s.equals("") && isSearchActive) {
+//                    query = s;
+//                    nextPage = 1;
+//                    isSearchActive = false;
+//                    adapter.clearListData();
+//                    getData(nextPage);
+//                }
                 return false;
             }
         });
-
     }
 
-
-    @Override
-    protected void onResume() {
-        super.onResume();
-        query = searchView.getQuery().toString();
-        switch (filmClass.getRequestStatus()) {
-            case 0:
-                break;
-            case 1:
-                showNetErrScreen();
-                break;
-            case 2:
-                showSearchErrScreen();
-                break;
-            case 3:
-                getData(nextPage);
-                break;
-            default:
-                break;
-        }
-    }
 
     public void getData(int page) {
         try {
@@ -170,26 +171,25 @@ public class MainActivity extends AppCompatActivity {
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
-        Call<Resp> call;
-        query = searchView.getQuery().toString();
+        Call<RequestDTO> call;
         if (query.equals("")) {
-            call = apiInterface.getAllFilms(Constants.API_KEY, "ru", page);
+            call = apiInterface.getAllFilms(Constants.API_KEY, Constants.LANG_RU, page);
         } else {
-            call = apiInterface.getFiltredFilms(Constants.API_KEY, "ru", page, query);
+            call = apiInterface.getFiltredFilms(Constants.API_KEY, Constants.LANG_RU, page, query);
         }
-        progress = 0;
+        progress = 5;
         progressBar.setProgress(progress);
-        call.enqueue(new Callback<Resp>() {
+        call.enqueue(new Callback<RequestDTO>() {
             @Override
-            public void onResponse(Call<Resp> call, retrofit2.Response<Resp> response) {
-                Resp resp = response.body();
+            public void onResponse(Call<RequestDTO> call, retrofit2.Response<RequestDTO> response) {
+                RequestDTO resp = response.body();
                 if (resp.getTotalResults() != 0) {
-                    filmInfos = (ArrayList<FilmInfo>) resp.getResults();
+                    filmInformationDTOList = (ArrayList<FilmInformationDTO>) resp.getResults();
                     lastPage = resp.getTotalPages();
-                    filmClass.setLastPage(lastPage);
-                    filmClass.setRequestStatus(STATUS_OK);
+                    dataFilms.setLastPage(lastPage);
+                    dataFilms.setRequestStatus(Constants.STATUS_OK);
                     new GetTask().execute();
-                    filmClass.setNextPage(++nextPage);
+                    dataFilms.setNextPage(++nextPage);
                     alertTextView.setVisibility(View.GONE);
                 } else {
                     semaphore.release();
@@ -201,7 +201,7 @@ public class MainActivity extends AppCompatActivity {
             }
 
             @Override
-            public void onFailure(Call<Resp> call, Throwable t) {
+            public void onFailure(Call<RequestDTO> call, Throwable t) {
                 semaphore.release();
                 showNetErrScreen();
                 call.cancel();
@@ -214,14 +214,14 @@ public class MainActivity extends AppCompatActivity {
 
         @Override
         protected Void doInBackground(String... params) {
-            Integer count = filmInfos.size();
+            Integer count = filmInformationDTOList.size();
             try {
-                for (FilmInfo f : filmInfos) {
+                for (FilmInformationDTO f : filmInformationDTOList) {
                     byte[] poster = get("http://image.tmdb.org/t/p/w185/" + f.getPosterPath());
                     if (poster != null && poster.length > 0) {
                         Bitmap bitmap = BitmapFactory.decodeByteArray(poster, 0, poster.length);
                         f.setPoster(bitmap);
-                        publishProgress(progress += 100 / count);
+                        publishProgress(progress += 95 / count);
                     }
                 }
             } catch (Exception e) {
@@ -240,7 +240,7 @@ public class MainActivity extends AppCompatActivity {
 
         @Override
         protected void onPreExecute() {
-            if (!OneMoreFilmClass.isEmpty()) {
+            if (!FilmDataModel.isEmpty()) {
                 progressBar.setProgress(0);
                 frameLayout.setVisibility(View.VISIBLE);
                 progressBar.setVisibility(View.VISIBLE);
@@ -258,13 +258,13 @@ public class MainActivity extends AppCompatActivity {
             if (nextPage == 2) {
                 adapter.clearListData();
             }
-            adapter.updateListData(filmInfos);
+            adapter.updateListData(filmInformationDTOList);
             semaphore.release();
         }
 
         @Override
         protected void onProgressUpdate(Integer... values) {
-            if (!OneMoreFilmClass.isEmpty()) {
+            if (!FilmDataModel.isEmpty()) {
                 progressBar.setProgress(values[0]);
             }
         }
@@ -275,13 +275,13 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void showNetErrScreen() {
-        if (filmClass.getRequestStatus() == Constants.STATUS_OK) {
+        if (dataFilms.getRequestStatus().equals(Constants.STATUS_OK)) {
             Snackbar.make(listView, R.string.snack_message, Snackbar.LENGTH_LONG).show();
         } else {
             alertTextView.setCompoundDrawablesWithIntrinsicBounds(0, R.drawable.ic_alert_triangle, 0, 0);
             alertTextView.setText(R.string.search_trouble);
             alertTextView.setVisibility(View.VISIBLE);
-            filmClass.setRequestStatus(Constants.STATUS_NETWORK_ERR);
+            dataFilms.setRequestStatus(Constants.STATUS_NETWORK_ERR);
             adapter.clearListData();
         }
     }
@@ -290,6 +290,6 @@ public class MainActivity extends AppCompatActivity {
         alertTextView.setCompoundDrawablesWithIntrinsicBounds(0, R.drawable.ic_big_search, 0, 0);
         alertTextView.setText("\n\nПо запросу \"" + query + "\" ничего не найдено");
         alertTextView.setVisibility(View.VISIBLE);
-        filmClass.setRequestStatus(Constants.STATUS_SEARCH_ERR);
+        dataFilms.setRequestStatus(Constants.STATUS_SEARCH_ERR);
     }
 }

@@ -1,13 +1,11 @@
 
 package com.home.pavel.myapplication;
 
-import android.os.Parcelable;
-
 import java.util.List;
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
 
-public class Resp {
+public class RequestDTO {
 
     @SerializedName("page")
     @Expose
@@ -20,7 +18,7 @@ public class Resp {
     private Integer totalPages;
     @SerializedName("results")
     @Expose
-    private List<FilmInfo> results = null;
+    private List<FilmInformationDTO> results = null;
 
     public Integer getPage() {
         return page;
@@ -46,11 +44,11 @@ public class Resp {
         this.totalPages = totalPages;
     }
 
-    public List<FilmInfo> getResults() {
+    public List<FilmInformationDTO> getResults() {
         return results;
     }
 
-    public void setResults(List<FilmInfo> results) {
+    public void setResults(List<FilmInformationDTO> results) {
         this.results = results;
     }
 

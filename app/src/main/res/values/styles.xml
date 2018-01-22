@@ -7,13 +7,4 @@
         <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
         <item name="colorAccent">@color/colorAccent</item>
     </style>
-
-    <style name="SearchViewStyleMyApp" parent="Widget.AppCompat.SearchView">
-        <item name="searchHintIcon">@drawable/ic_search</item>
-        <item name="closeIcon" visible="false"/>
-    </style>
-
-    <style name="MyThemeOverlay.ActionBar" parent="ThemeOverlay.AppCompat.Dark.ActionBar">
-        <item name="searchViewStyle">@style/SearchViewStyleMyApp</item>
-    </style>
 </resources>
