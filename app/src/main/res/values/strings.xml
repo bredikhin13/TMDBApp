@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">My Application</string>
+    <string name="btn_name">Connect</string>
+    <string name="hint_str">Поиск по названию фильма</string>
+</resources>
