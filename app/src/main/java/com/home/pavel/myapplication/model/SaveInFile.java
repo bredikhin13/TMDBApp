@@ -5,6 +5,7 @@ import android.widget.Toast;
 
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -22,8 +23,9 @@ import static android.content.Context.MODE_APPEND;
 public class SaveInFile {
     public static void openFile(String fileName, Context context, ArrayList<Integer> list) {
         try {
-            InputStream inputStream = context.openFileInput(fileName);
-
+            File file = new File(context.getFilesDir(), fileName);
+            file.createNewFile();
+            FileInputStream inputStream = context.openFileInput(fileName);
             if (inputStream != null) {
                 InputStreamReader isr = new InputStreamReader(inputStream);
                 BufferedReader reader = new BufferedReader(isr);
@@ -41,7 +43,7 @@ public class SaveInFile {
 
     public static void saveFile(String fileName, Context context, ArrayList<Integer> list) {
         try {
-            OutputStream outputStream = context.openFileOutput(fileName, Context.MODE_PRIVATE);
+            FileOutputStream outputStream = context.openFileOutput(fileName, Context.MODE_PRIVATE);
             OutputStreamWriter osw = new OutputStreamWriter(outputStream);
             for(Integer i: list){
                 osw.write(i+"\n");
@@ -55,7 +57,7 @@ public class SaveInFile {
     }
     public static void saveOneFilm(String fileName, Context context, Integer film) {
         try {
-            OutputStream outputStream = context.openFileOutput(fileName, MODE_APPEND);
+            FileOutputStream outputStream = context.openFileOutput(fileName, MODE_APPEND);
             OutputStreamWriter osw = new OutputStreamWriter(outputStream);
             osw.write(film+"\n");
             osw.close();

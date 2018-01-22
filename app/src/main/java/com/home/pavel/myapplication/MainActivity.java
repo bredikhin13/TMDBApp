@@ -4,6 +4,7 @@ package com.home.pavel.myapplication;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.os.AsyncTask;
+import android.support.design.widget.Snackbar;
 import android.support.v4.widget.SwipeRefreshLayout;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -34,30 +35,29 @@ import retrofit2.Callback;
 import retrofit2.Retrofit;
 import retrofit2.converter.gson.GsonConverterFactory;
 
+import static com.home.pavel.myapplication.Constants.STATUS_OK;
+
 
 public class MainActivity extends AppCompatActivity {
 
     private OkHttpClient client;
     private SwipeRefreshLayout swipeRefreshLayout;
-    //    ArrayList<Integer> favFilmId = new ArrayList<>();
     Semaphore semaphore;
     ProgressBar progressBar;
-    ProgressBar progressBarCyrcle;
+    ProgressBar progressBarCircle;
     ListView listView;
     Retrofit retrofit;
     TmdbApiInterface apiInterface;
-    //    Resp resp;
     TextView alertTextView;
     ArrayList<FilmInfo> filmInfos;
     int nextPage;
-    int lastPage = 1000;
+    int lastPage;
     int progress = 0;
     CustomAdapter adapter;
     String query = "";
     SearchView searchView;
     OneMoreFilmClass filmClass;
     FrameLayout frameLayout;
-//    private String apiKey = "6ccd72a2a8fc239b13f209408fc31c33";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -70,11 +70,10 @@ public class MainActivity extends AppCompatActivity {
         searchView = findViewById(R.id.searchView);
         alertTextView = findViewById(R.id.alertTextView);
         progressBar = findViewById(R.id.progressBar);
-        progressBarCyrcle = findViewById(R.id.progressBar2);
+        progressBarCircle = findViewById(R.id.progressBar2);
         frameLayout = findViewById(R.id.frameLayout);
-        //frameLayout.setVisibility(View.INVISIBLE);
         progressBar.setVisibility(View.INVISIBLE);
-        progressBarCyrcle.setVisibility(View.INVISIBLE);
+        progressBarCircle.setVisibility(View.INVISIBLE);
         client = filmClass.getClient();
         retrofit = new Retrofit.Builder()
                 .baseUrl("https://api.themoviedb.org")
@@ -83,17 +82,10 @@ public class MainActivity extends AppCompatActivity {
                 .build();
         apiInterface = retrofit.create(TmdbApiInterface.class);
         listView = findViewById(R.id.listView);
-
-//        resp = new Resp();
-//        SaveInFile.openFile("fav", this, favFilmId);
         SaveInFile.openFile(Constants.FILE_NAME, this, filmClass.getFavFilms());
         semaphore = new Semaphore(1);
-//        resp.setResults(new ArrayList<FilmInfo>());
         adapter = new CustomAdapter(this);
         listView.setAdapter(adapter);
-        if (OneMoreFilmClass.isEmpty()) {
-            getData(nextPage);
-        }
         listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
@@ -112,7 +104,7 @@ public class MainActivity extends AppCompatActivity {
                                  int firstVisibleItem,
                                  int visibleItemCount,
                                  int totalItemCount) {
-                if (visibleItemCount > 0 && firstVisibleItem + visibleItemCount == totalItemCount && nextPage <= lastPage && semaphore.availablePermits() != 0) {
+                if (visibleItemCount > 0 && firstVisibleItem + visibleItemCount == totalItemCount && nextPage < lastPage && semaphore.availablePermits() != 0) {
                     getData(nextPage);
                 }
             }
@@ -148,9 +140,29 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-
     }
 
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        query = searchView.getQuery().toString();
+        switch (filmClass.getRequestStatus()) {
+            case 0:
+                break;
+            case 1:
+                showNetErrScreen();
+                break;
+            case 2:
+                showSearchErrScreen();
+                break;
+            case 3:
+                getData(nextPage);
+                break;
+            default:
+                break;
+        }
+    }
 
     public void getData(int page) {
         try {
@@ -159,38 +171,39 @@ public class MainActivity extends AppCompatActivity {
             e.printStackTrace();
         }
         Call<Resp> call;
+        query = searchView.getQuery().toString();
         if (query.equals("")) {
             call = apiInterface.getAllFilms(Constants.API_KEY, "ru", page);
         } else {
             call = apiInterface.getFiltredFilms(Constants.API_KEY, "ru", page, query);
         }
-        System.out.println("Start load");
         progress = 0;
         progressBar.setProgress(progress);
         call.enqueue(new Callback<Resp>() {
             @Override
             public void onResponse(Call<Resp> call, retrofit2.Response<Resp> response) {
                 Resp resp = response.body();
-                if(resp.getTotalResults()!=0) {
+                if (resp.getTotalResults() != 0) {
                     filmInfos = (ArrayList<FilmInfo>) resp.getResults();
-                    //filmClass.addToAllFilms((ArrayList<FilmInfo>) resp.getResults());
-//                lastPage = resp.getTotalPages();
-//                Kek();
+                    lastPage = resp.getTotalPages();
+                    filmClass.setLastPage(lastPage);
+                    filmClass.setRequestStatus(STATUS_OK);
                     new GetTask().execute();
                     filmClass.setNextPage(++nextPage);
-                    System.out.println("end load");
+                    alertTextView.setVisibility(View.GONE);
                 } else {
-                    alertTextView.setCompoundDrawablesWithIntrinsicBounds(0,R.drawable.ic_big_search,0,0);
-                    alertTextView.setText("По запросу \""+query+"\" ничего не найдено");
-                    alertTextView.setVisibility(View.VISIBLE);
+                    semaphore.release();
+                    nextPage = 1;
                     adapter.clearListData();
+                    showSearchErrScreen();
+
                 }
-//                textView.setText(resp.getTotalResults().toString());
             }
 
             @Override
             public void onFailure(Call<Resp> call, Throwable t) {
-                System.out.println("azazazazazaza");
+                semaphore.release();
+                showNetErrScreen();
                 call.cancel();
             }
         });
@@ -201,7 +214,6 @@ public class MainActivity extends AppCompatActivity {
 
         @Override
         protected Void doInBackground(String... params) {
-            //Integer count = filmClass.getAllFilms().size();
             Integer count = filmInfos.size();
             try {
                 for (FilmInfo f : filmInfos) {
@@ -210,7 +222,6 @@ public class MainActivity extends AppCompatActivity {
                         Bitmap bitmap = BitmapFactory.decodeByteArray(poster, 0, poster.length);
                         f.setPoster(bitmap);
                         publishProgress(progress += 100 / count);
-//                        System.out.println("" + progress);
                     }
                 }
             } catch (Exception e) {
@@ -234,7 +245,7 @@ public class MainActivity extends AppCompatActivity {
                 frameLayout.setVisibility(View.VISIBLE);
                 progressBar.setVisibility(View.VISIBLE);
             } else {
-                progressBarCyrcle.setVisibility(View.VISIBLE);
+                progressBarCircle.setVisibility(View.VISIBLE);
             }
         }
 
@@ -243,13 +254,11 @@ public class MainActivity extends AppCompatActivity {
         protected void onPostExecute(Void params) {
             frameLayout.setVisibility(View.INVISIBLE);
             progressBar.setVisibility(View.INVISIBLE);
-            progressBarCyrcle.setVisibility(View.INVISIBLE);
+            progressBarCircle.setVisibility(View.INVISIBLE);
             if (nextPage == 2) {
                 adapter.clearListData();
             }
-            //filmClass.setAllFilms(filmInfos);
             adapter.updateListData(filmInfos);
-//            adapter.notifyDataSetChanged();
             semaphore.release();
         }
 
@@ -263,5 +272,24 @@ public class MainActivity extends AppCompatActivity {
         @Override
         protected void onCancelled() {
         }
+    }
+
+    private void showNetErrScreen() {
+        if (filmClass.getRequestStatus() == Constants.STATUS_OK) {
+            Snackbar.make(listView, R.string.snack_message, Snackbar.LENGTH_LONG).show();
+        } else {
+            alertTextView.setCompoundDrawablesWithIntrinsicBounds(0, R.drawable.ic_alert_triangle, 0, 0);
+            alertTextView.setText(R.string.search_trouble);
+            alertTextView.setVisibility(View.VISIBLE);
+            filmClass.setRequestStatus(Constants.STATUS_NETWORK_ERR);
+            adapter.clearListData();
+        }
+    }
+
+    private void showSearchErrScreen() {
+        alertTextView.setCompoundDrawablesWithIntrinsicBounds(0, R.drawable.ic_big_search, 0, 0);
+        alertTextView.setText("\n\nПо запросу \"" + query + "\" ничего не найдено");
+        alertTextView.setVisibility(View.VISIBLE);
+        filmClass.setRequestStatus(Constants.STATUS_SEARCH_ERR);
     }
 }

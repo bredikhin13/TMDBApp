@@ -16,13 +16,35 @@ public class OneMoreFilmClass {
         allFilms = new ArrayList<>();
         favFilms = new ArrayList<>();
         nextPage = 1;
+        lastPage = 1001;
+        requestStatus = Constants.STATUS_EMPTY_LIST;
         client = new OkHttpClient();
     }
     private ArrayList<FilmInfo> allFilms;
     private ArrayList<Integer> favFilms;
     private Integer nextPage;
     private OkHttpClient client;
-    private Retrofit retrofit;
+    private Integer lastPage;
+
+    public Integer getRequestStatus() {
+        return requestStatus;
+    }
+
+    public void setRequestStatus(Integer requestStatus) {
+        this.requestStatus = requestStatus;
+    }
+
+    private Integer requestStatus;
+
+
+
+    public Integer getLastPage() {
+        return lastPage;
+    }
+
+    public void setLastPage(Integer lastPage) {
+        this.lastPage = lastPage;
+    }
 
     public OkHttpClient getClient() {
         return client;
@@ -32,13 +54,6 @@ public class OneMoreFilmClass {
         this.client = client;
     }
 
-    public Retrofit getRetrofit() {
-        return retrofit;
-    }
-
-    public void setRetrofit(Retrofit retrofit) {
-        this.retrofit = retrofit;
-    }
 
     public Integer getNextPage() {
         return nextPage;
@@ -74,6 +89,8 @@ public class OneMoreFilmClass {
 
     public void clearAllFilms(){
         allFilms.clear();
+        nextPage = 1;
+        lastPage = 1001;
     }
 
     public Integer getCountFilms(){

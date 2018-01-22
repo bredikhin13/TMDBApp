@@ -2,5 +2,6 @@
     <string name="app_name">My Application</string>
     <string name="btn_name">Connect</string>
     <string name="hint_str">Поиск по названию фильма</string>
-    <string name="search_trouble">Нам не удалось обработать ваш запрос. Попробуйте ещё раз</string>
+    <string name="search_trouble">\n\nНам не удалось обработать ваш запрос. Попробуйте ещё раз</string>
+    <string name="snack_message">Проверьте соединение с интернетом и попробуйте еще раз</string>
 </resources>
